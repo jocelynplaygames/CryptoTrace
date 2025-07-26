@@ -1,5 +1,5 @@
 """
-Alert processor for monitoring cryptocurrency prices and generating alerts.
+加密货币价格监控与告警处理器。
 """
 import json
 import logging
@@ -12,19 +12,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class AlertProcessor:
+    """
+    告警处理器：用于监控加密货币价格并生成告警。
+    """
     def __init__(self, 
                  bootstrap_servers: str = 'localhost:9092',
                  price_topics: List[str] = None,
                  alert_topic: str = 'crypto_alerts',
                  consumer_group: str = 'alert_processor'):
         """
-        Initialize the alert processor.
-        
-        Args:
-            bootstrap_servers: Kafka bootstrap servers
-            price_topics: List of price topics to monitor
-            alert_topic: Topic to publish alerts to
-            consumer_group: Consumer group ID
+        初始化告警处理器。
+        参数：
+            bootstrap_servers: Kafka服务器地址
+            price_topics: 需要监控的价格主题列表
+            alert_topic: 发布告警的主题
+            consumer_group: 消费者组ID
         """
         self.bootstrap_servers = bootstrap_servers
         self.price_topics = price_topics or []
@@ -52,10 +54,9 @@ class AlertProcessor:
         
     def connect(self) -> bool:
         """
-        Connect to Kafka broker.
-        
-        Returns:
-            bool: True if connection successful, False otherwise
+        连接到Kafka服务器。
+        返回：
+            bool: 连接成功返回True，否则返回False
         """
         try:
             # Initialize consumer
@@ -83,14 +84,12 @@ class AlertProcessor:
             
     def check_price_threshold(self, symbol: str, price: float) -> Optional[Dict]:
         """
-        Check if price crosses any thresholds.
-        
-        Args:
-            symbol: Cryptocurrency symbol
-            price: Current price
-            
-        Returns:
-            Optional[Dict]: Alert message if threshold crossed, None otherwise
+        检查价格是否突破阈值。
+        参数：
+            symbol: 加密货币符号
+            price: 当前价格
+        返回：
+            Optional[Dict]: 如果突破阈值则返回告警信息，否则返回None
         """
         if symbol not in self.price_thresholds:
             return None
@@ -120,14 +119,12 @@ class AlertProcessor:
         
     def check_volatility(self, symbol: str, price: float) -> Optional[Dict]:
         """
-        Check for significant price volatility.
-        
-        Args:
-            symbol: Cryptocurrency symbol
-            price: Current price
-            
-        Returns:
-            Optional[Dict]: Alert message if volatility detected, None otherwise
+        检查价格是否出现剧烈波动。
+        参数：
+            symbol: 加密货币符号
+            price: 当前价格
+        返回：
+            Optional[Dict]: 如果波动超过阈值则返回告警信息，否则返回None
         """
         if symbol not in self.price_history:
             self.price_history[symbol] = []
@@ -161,13 +158,11 @@ class AlertProcessor:
         
     def send_alert(self, alert: Dict) -> bool:
         """
-        Send alert to Kafka topic.
-        
-        Args:
-            alert: Alert message
-            
-        Returns:
-            bool: True if sent successfully, False otherwise
+        发送告警到Kafka指定主题。
+        参数：
+            alert: 告警信息字典
+        返回：
+            bool: 发送成功返回True，否则返回False
         """
         try:
             future = self.producer.send(self.alert_topic, value=alert)
@@ -181,10 +176,9 @@ class AlertProcessor:
             
     def process_message(self, message) -> None:
         """
-        Process a single price message.
-        
-        Args:
-            message: Kafka message containing price data
+        处理单条价格消息，判断是否需要发送告警。
+        参数：
+            message: Kafka消息，包含价格数据
         """
         try:
             data = message.value
@@ -205,7 +199,9 @@ class AlertProcessor:
             logger.error(f"Error processing message: {e}")
             
     def run(self) -> None:
-        """Run the alert processor."""
+        """
+        启动告警处理主循环，持续监听并处理消息。
+        """
         if not self.consumer:
             logger.error("Not connected to Kafka")
             return

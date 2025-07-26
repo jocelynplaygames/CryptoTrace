@@ -1,5 +1,5 @@
 """
-FastAPI application for serving cryptocurrency data.
+基于FastAPI的加密货币数据服务API。
 """
 import os
 import json
@@ -17,7 +17,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS
+# 启用CORS，允许跨域请求
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,13 +26,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Models
+# 数据模型
 class PriceData(BaseModel):
+    """
+    价格数据模型。
+    """
     symbol: str
     price: float
     timestamp: datetime
     
 class AnalyticsData(BaseModel):
+    """
+    分析数据模型。
+    """
     symbol: str
     avg_price: float
     min_price: float
@@ -40,6 +46,9 @@ class AnalyticsData(BaseModel):
     timestamp: datetime
     
 class AlertData(BaseModel):
+    """
+    告警数据模型。
+    """
     type: str
     symbol: str
     price: float
@@ -49,9 +58,11 @@ class AlertData(BaseModel):
     previous_price: Optional[float] = None
     change_percent: Optional[float] = None
 
-# Data access functions
+# 数据访问函数
 def get_price_data(symbol: str, start_time: datetime, end_time: datetime) -> List[Dict]:
-    """Get historical price data for a symbol."""
+    """
+    获取指定币种在时间区间内的历史价格数据。
+    """
     # Construct data directory path
     base_dir = "data/raw"
     symbol_dir = f"{base_dir}/{symbol.lower()}"
@@ -85,7 +96,9 @@ def get_price_data(symbol: str, start_time: datetime, end_time: datetime) -> Lis
     return data
 
 def get_analytics_data(symbol: str, start_time: datetime, end_time: datetime) -> List[Dict]:
-    """Get historical analytics data for a symbol."""
+    """
+    获取指定币种在时间区间内的历史分析数据。
+    """
     # Similar to get_price_data but for analytics
     # For now, we'll calculate analytics from price data
     prices = get_price_data(symbol, start_time, end_time)
@@ -117,7 +130,9 @@ def get_analytics_data(symbol: str, start_time: datetime, end_time: datetime) ->
 
 def get_alerts(symbol: Optional[str] = None, alert_type: Optional[str] = None,
                start_time: Optional[datetime] = None, end_time: Optional[datetime] = None) -> List[Dict]:
-    """Get historical alerts."""
+    """
+    获取历史告警信息。
+    """
     # Read alerts from storage
     # For now, we'll return a sample alert
     return [{
@@ -129,10 +144,12 @@ def get_alerts(symbol: Optional[str] = None, alert_type: Optional[str] = None,
         'timestamp': datetime.now()
     }]
 
-# API routes
+# API 路由
 @app.get("/")
 async def root():
-    """API root endpoint."""
+    """
+    API根路由，返回服务信息。
+    """
     return {"message": "Crypto Price API v1.0.0"}
 
 @app.get("/prices/{symbol}", response_model=List[PriceData])
@@ -141,7 +158,9 @@ async def get_prices(
     start_time: datetime = Query(default=None),
     end_time: datetime = Query(default=None)
 ):
-    """Get historical price data for a symbol."""
+    """
+    获取指定币种的历史价格数据。
+    """
     # Default to last hour if no time range specified
     if not end_time:
         end_time = datetime.now()
@@ -160,7 +179,9 @@ async def get_analytics(
     start_time: datetime = Query(default=None),
     end_time: datetime = Query(default=None)
 ):
-    """Get historical analytics data for a symbol."""
+    """
+    获取指定币种的历史分析数据。
+    """
     # Default to last hour if no time range specified
     if not end_time:
         end_time = datetime.now()
@@ -180,17 +201,21 @@ async def get_alert_history(
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None
 ):
-    """Get historical alerts."""
+    """
+    获取历史告警信息。
+    """
     alerts = get_alerts(symbol, alert_type, start_time, end_time)
     if not alerts:
         raise HTTPException(status_code=404, detail="No alerts found")
         
     return alerts
 
-# WebSocket endpoint for real-time data
+# WebSocket接口用于实时推送价格数据
 @app.websocket("/ws/{symbol}")
 async def websocket_endpoint(websocket):
-    """Stream real-time price data."""
+    """
+    实时推送指定币种的价格数据。
+    """
     await websocket.accept()
     
     try:
