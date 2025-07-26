@@ -4,7 +4,7 @@
 # ✅ 提供 !status 和 !help 命令。
 import discord
 from discord.ext import commands, tasks
-from confluent_kafka import Consumer
+from kafka import KafkaConsumer
 import json
 import logging
 import os
@@ -24,7 +24,7 @@ class CryptoAlertBot(commands.Bot):
         self,
         command_prefix: str,
         alert_channel_id: int,
-        bootstrap_servers: str,
+        bootstrap_servers: list,
         topic: str
     ):
         """
@@ -33,7 +33,7 @@ class CryptoAlertBot(commands.Bot):
         Args:
             command_prefix: Command prefix for bot commands
             alert_channel_id: Discord channel ID for sending alerts
-            bootstrap_servers: String of Kafka broker addresses (comma-separated)
+            bootstrap_servers: List of Kafka broker addresses
             topic: Kafka topic to consume anomaly alerts from
         """
         intents = discord.Intents.default()
@@ -43,13 +43,13 @@ class CryptoAlertBot(commands.Bot):
         super().__init__(command_prefix=command_prefix, intents=intents, help_command=None)
         
         self.alert_channel_id = alert_channel_id
-        config = {
-            'bootstrap.servers': bootstrap_servers,
-            'group.id': 'discord_alert_bot',
-            'auto.offset.reset': 'latest'
-        }
-        self.consumer = Consumer(config)
-        self.consumer.subscribe([topic])
+        self.consumer = KafkaConsumer(
+            topic,
+            bootstrap_servers=bootstrap_servers,
+            value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+            auto_offset_reset='latest',
+            group_id='discord_alert_bot'
+        )
         
         
 
@@ -115,13 +115,11 @@ class CryptoAlertBot(commands.Bot):
 
             # 用 poll() 替换 for message in self.consumer:
             
-            records = self.consumer.poll(timeout=0.1) # 非阻塞拉取消息，100ms
+            records = self.consumer.poll(timeout_ms = 100) # 非阻塞拉取消息
             #Kafka 会在 100 毫秒内尝试获取消息，如果没有消息会立刻返回，不阻塞主线程。
-            if records is None:
-                return  # 没有消息时直接返回
             for tp, messages in records.items():
                 for message in messages:
-                    alert_data = json.loads(message.value().decode('utf-8'))
+                    alert_data = message.value
                     alert_message = self.format_alert_message(alert_data)
                 
                 
@@ -156,8 +154,8 @@ def run_bot():
     #我增加使用 python-dotenv 来自动加载 .env 文件
     TOKEN = os.getenv('DISCORD_BOT_TOKEN')
     CHANNEL_ID = int(os.getenv('DISCORD_CHANNEL_ID'))
-    # KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
-    KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'host.docker.internal:9092')
+    # KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(',')
+    KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'host.docker.internal:9092').split(',')
 
     
     if not TOKEN:

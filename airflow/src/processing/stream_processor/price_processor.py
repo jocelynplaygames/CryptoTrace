@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List
-from confluent_kafka import Consumer, Producer
+from kafka import KafkaConsumer, KafkaProducer
 from collections import defaultdict
 import threading
 import queue

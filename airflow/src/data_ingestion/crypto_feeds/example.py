@@ -20,8 +20,7 @@ import signal
 import platform
 import threading
 
-# from .feed_client import CryptoFeedClient
-# 临时注释掉相对导入，避免ImportError
+from .feed_client import CryptoFeedClient
 from ..kafka_producer.crypto_producer import CryptoKafkaProducer
 
 logging.basicConfig(level=logging.INFO)

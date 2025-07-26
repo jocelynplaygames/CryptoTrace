@@ -19,7 +19,7 @@ x-airflow-common: &airflow-common
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/config:/opt/airflow/config
     - ./airflow/plugins:/opt/airflow/plugins
-    - ./airflow:/opt/airflow/project-root
+    - .:/opt/airflow/project-root
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-common-depends-on
     redis:
@@ -79,21 +79,15 @@ services:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      #为了让宿主机访问 Kafka
-      #KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      #外告诉别人我是 localhost:9092,但 Kafka 容器里的 localhost ≠ 宿主机的 localhost
-      # 👇 多 listener 配置，容器内部和宿主机都能访问
+      # 配置多监听器：容器内和宿主机都能访问
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://host.docker.internal:9092
-      # 0.0.0.0 表示 Kafka 监听所有网络接口（容器内外均可连接）。
-      # KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1

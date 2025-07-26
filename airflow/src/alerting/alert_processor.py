@@ -5,8 +5,8 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
-from confluent_kafka import Consumer, Producer
-from confluent_kafka import KafkaError
+from kafka import KafkaConsumer, KafkaProducer
+from kafka.errors import KafkaError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

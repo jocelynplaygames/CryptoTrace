@@ -12,8 +12,8 @@ import json
 import logging
 from typing import Dict, Optional
 from datetime import datetime
-from confluent_kafka import Producer
-from confluent_kafka import KafkaError
+from kafka import KafkaProducer
+from kafka.errors import KafkaError
 import time
 import requests
 
@@ -64,7 +64,7 @@ class CryptoKafkaProducer:
         """
         self.bootstrap_servers = bootstrap_servers
         self.topic_prefix = topic_prefix
-        self.producer: Optional[Producer] = None  # Kafka生产者实例，初始为None
+        self.producer: Optional[KafkaProducer] = None  # Kafka生产者实例，初始为None
         
     def connect(self) -> bool:
         """
@@ -83,13 +83,14 @@ class CryptoKafkaProducer:
         """
         try:
             # 创建Kafka生产者实例，配置各种参数
-            config = {
-                'bootstrap.servers': self.bootstrap_servers,  # Kafka服务器地址
-                'acks': 'all',  # Wait for all replicas - 等待所有副本确认，确保数据不丢失
-                'retries': 3,   # Retry on failure - 发送失败时重试3次
-                'max.in.flight.requests.per.connection': 1  # Preserve order - 每个连接最多1个未完成请求，保证消息顺序
-            }
-            self.producer = Producer(config)
+            self.producer = KafkaProducer(
+                bootstrap_servers=self.bootstrap_servers,  # Kafka服务器地址
+                value_serializer=lambda v: json.dumps(v, cls=DateTimeEncoder).encode('utf-8'),  # 值序列化器
+                key_serializer=lambda v: v.encode('utf-8'),  # 键序列化器
+                acks='all',  # Wait for all replicas - 等待所有副本确认，确保数据不丢失
+                retries=3,   # Retry on failure - 发送失败时重试3次
+                max_in_flight_requests_per_connection=1  # Preserve order - 每个连接最多1个未完成请求，保证消息顺序
+            )
             logger.info(f"Connected to Kafka broker at {self.bootstrap_servers}")
             return True
             
@@ -139,16 +140,17 @@ class CryptoKafkaProducer:
             # Send data to Kafka
             # 发送数据到Kafka主题
             # key: 使用符号作为分区键，确保相同符号的数据进入同一分区
-            # value: 发送完整的数据字典（JSON序列化）
-            self.producer.produce(
+            # value: 发送完整的数据字典
+            future = self.producer.send(
                 topic=topic,
-                key=symbol.encode('utf-8'),
-                value=json.dumps(data, cls=DateTimeEncoder).encode('utf-8')
+                key=symbol,
+                value=data
             )
             
-            # Flush to ensure message is sent
-            # 刷新缓冲区，确保消息被发送
-            self.producer.flush(timeout=10)
+            # Wait for the send to complete
+            # 等待发送操作完成，设置10秒超时
+            # 这确保我们能够捕获发送过程中的任何错误
+            future.get(timeout=10)
             logger.debug(f"Sent data to topic {topic}: {data}")
             return True
             
@@ -175,14 +177,9 @@ class CryptoKafkaProducer:
         注意：在程序结束时应该调用此方法以正确清理资源
         """
         if self.producer:
-            try:
-                # confluent-kafka的Producer没有close方法，使用flush确保消息发送
-                self.producer.flush(timeout=10)
-                logger.info("Kafka producer flushed and closed")
-            except Exception as e:
-                logger.warning(f"Error closing producer: {e}")
-            finally:
-                self.producer = None  # 重置为None 
+            self.producer.close()  # 关闭生产者连接
+            logger.info("Kafka producer closed")
+            self.producer = None  # 重置为None 
 
 def fetch_real_price(symbol):
     url = f"https://api.binance.us/api/v3/ticker/price?symbol={symbol.upper()}USDT"
@@ -191,31 +188,27 @@ def fetch_real_price(symbol):
     return float(resp.json()['price'])
 
 def main():
-    print("Starting crypto producer...")
     producer = CryptoKafkaProducer()
-    print(f"Attempting to connect to Kafka at: {producer.bootstrap_servers}")
     if not producer.connect():
         logger.error("Failed to connect to Kafka")
         return
-    print("Successfully connected to Kafka!")
 
     symbols = ['BTC', 'ETH', 'SOL', 'ADA']
     try:
-        # 只运行一次循环，发送数据后退出（适合Airflow任务）
-        for symbol in symbols:
-            try:
-                price = fetch_real_price(symbol)
-                data = {
-                    'symbol': symbol,
-                    'price': price,
-                    'timestamp': datetime.now().isoformat()
-                }
-                producer.send(data)
-                logger.info(f"Sent {symbol} data: {data}")
-            except Exception as e:
-                logger.error(f"Error fetching/sending {symbol}: {e}")
-            time.sleep(1)
-        print("Data collection completed successfully!")
+        while True:
+            for symbol in symbols:
+                try:
+                    price = fetch_real_price(symbol)
+                    data = {
+                        'symbol': symbol,
+                        'price': price,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    producer.send(data)
+                    logger.info(f"Sent {symbol} data: {data}")
+                except Exception as e:
+                    logger.error(f"Error fetching/sending {symbol}: {e}")
+                time.sleep(1)
     except KeyboardInterrupt:
         logger.info("Stopping producer...")
     finally:

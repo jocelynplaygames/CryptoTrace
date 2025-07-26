@@ -1,0 +1,36 @@
+# Core dependencies
+websockets==11.0.3
+kafka-python==2.0.2
+python-dateutil==2.8.2
+python-json-logger==2.0.7
+requests==2.31.0
+
+# Data Analysis
+pandas==2.0.3
+numpy==1.24.3
+pyarrow==14.0.1  # For Parquet support
+
+# Web Framework
+fastapi==0.115.6
+uvicorn==0.32.1
+pydantic==2.10.3
+websocket-client==1.6.1
+
+# Visualization
+streamlit==1.29.0
+plotly==5.18.0
+
+
+#-----
+scipy==1.11.4
+
+# Discord Bot
+discord.py==2.5.2
+
+
+python-dotenv==1.1.1
+
+# Airflow  DAG 
+kafka-python==2.0.2
+pandas==2.0.3
+python-dateutil==2.8.2

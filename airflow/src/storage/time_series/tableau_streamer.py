@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from confluent_kafka import Consumer
+from kafka import KafkaConsumer
 import pandas as pd
 
 logging.basicConfig(level=logging.INFO)

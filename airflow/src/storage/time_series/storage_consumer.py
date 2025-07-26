@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
-from confluent_kafka import Consumer
+from kafka import KafkaConsumer
 from .price_store import PriceStore
 
 logging.basicConfig(level=logging.INFO)

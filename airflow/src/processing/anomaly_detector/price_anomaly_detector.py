@@ -1,5 +1,5 @@
 import numpy as np
-from confluent_kafka import Consumer, Producer
+from kafka import KafkaConsumer, KafkaProducer
 import json
 from typing import List, Dict, Optional
 import logging
