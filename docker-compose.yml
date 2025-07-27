@@ -185,6 +185,8 @@ services:
     <<: *airflow-common
     
     command: celery worker
+    ports:
+      - "8793:8793"
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -197,6 +199,7 @@ services:
       <<: *airflow-common-env #是在“继承一套环境变量”
       # 这样 Python 才知道 src.xxx 是哪个文件夹里的东西。
       PYTHONPATH: /opt/airflow/project-root
+      AIRFLOW_LOGGING_REMOTE_LOGGING:"False" # 关闭远程日志访问（否则 Airflow 还会试图访问 localhost:8793）
       DUMB_INIT_SETSID: "0"
     restart: always
     depends_on:

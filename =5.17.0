@@ -1,8 +1,0 @@
-Collecting plotly
-  Downloading plotly-6.2.0-py3-none-any.whl.metadata (8.5 kB)
-Requirement already satisfied: narwhals>=1.15.1 in /home/airflow/.local/lib/python3.12/site-packages (from plotly) (1.48.1)
-Requirement already satisfied: packaging in /home/airflow/.local/lib/python3.12/site-packages (from plotly) (24.0)
-Downloading plotly-6.2.0-py3-none-any.whl (9.6 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.6/9.6 MB 20.0 MB/s eta 0:00:00
-Installing collected packages: plotly
-Successfully installed plotly-6.2.0
