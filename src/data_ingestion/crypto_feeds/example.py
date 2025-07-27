@@ -21,8 +21,10 @@ import platform
 import threading
 
 # from .feed_client import CryptoFeedClient
+from src.data_ingestion.crypto_feeds.feed_client import CryptoFeedClient
 # 临时注释掉相对导入，避免ImportError
-from ..kafka_producer.crypto_producer import CryptoKafkaProducer
+# from ..kafka_producer.crypto_producer import CryptoKafkaProducer
+from src.data_ingestion.kafka_producer.crypto_producer import CryptoKafkaProducer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

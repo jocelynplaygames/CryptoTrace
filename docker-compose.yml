@@ -1,7 +1,10 @@
 # version: '3.8'  # Compose V2 会自动处理版本兼容，建议删除 version: 行以避免混淆。
 
 x-airflow-common: &airflow-common
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.0}
+  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.0}
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
@@ -12,7 +15,9 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+
+    # _PIP_ADDITIONAL_REQUIREMENTS: confluent-kafka>=2.0.0,discord.py>=2.3.0,scipy>=1.11.0,python-dotenv>=1.1.1,websockets>=11.0.3,requests>=2.31.0,pandas>=2.0.3,numpy>=1.24.3
+  
   volumes:
   # 挂载了本地路径到容器了
     - ./airflow/dags:/opt/airflow/dags
@@ -139,6 +144,9 @@ services:
   airflow-webserver:
     <<: *airflow-common
     command: webserver
+    environment:
+      <<: *airflow-common-env
+      PYTHONPATH: /opt/airflow/project-root
     ports:
       - "8080:8080"
     healthcheck:
@@ -157,6 +165,9 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    environment:
+      <<: *airflow-common-env
+      PYTHONPATH: /opt/airflow/project-root
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
@@ -172,6 +183,7 @@ services:
 
   airflow-worker:
     <<: *airflow-common
+    
     command: celery worker
     healthcheck:
       test:
@@ -182,7 +194,9 @@ services:
       retries: 5
       start_period: 30s
     environment:
-      <<: *airflow-common-env
+      <<: *airflow-common-env #是在“继承一套环境变量”
+      # 这样 Python 才知道 src.xxx 是哪个文件夹里的东西。
+      PYTHONPATH: /opt/airflow/project-root
       DUMB_INIT_SETSID: "0"
     restart: always
     depends_on:
@@ -194,6 +208,9 @@ services:
   airflow-triggerer:
     <<: *airflow-common
     command: triggerer
+    environment:
+      <<: *airflow-common-env
+      PYTHONPATH: /opt/airflow/project-root
     healthcheck:
       test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
       interval: 30s

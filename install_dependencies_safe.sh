@@ -42,8 +42,13 @@ echo "3. 安装kafka-python..."
 pip install kafka-python==2.0.2
 check_status "安装kafka-python"
 
+# 安装confluent-kafka
+echo "4. 安装confluent-kafka..."
+pip install confluent-kafka
+check_status "安装confluent-kafka"
+
 # 安装数据处理依赖
-echo "4. 安装数据处理依赖..."
+echo "5. 安装数据处理依赖..."
 pip install numpy>=1.26.0
 check_status "安装numpy"
 
@@ -54,7 +59,7 @@ pip install scipy>=1.11.0
 check_status "安装scipy"
 
 # 安装可视化依赖
-echo "5. 安装可视化依赖..."
+echo "6. 安装可视化依赖..."
 pip install streamlit>=1.28.0
 check_status "安装streamlit"
 
@@ -62,16 +67,17 @@ pip install plotly>=5.17.0
 check_status "安装plotly"
 
 # 安装其他依赖
-echo "6. 安装其他依赖..."
+echo "7. 安装其他依赖..."
 pip install discord.py>=2.3.0
 check_status "安装discord.py"
 
 echo "=== 所有依赖安装完成 ==="
 echo "检查安装结果："
-pip list | grep -E "(kafka|requests|numpy|pandas|scipy|streamlit|plotly|discord)"
+pip list | grep -E "(kafka|confluent|requests|numpy|pandas|scipy|streamlit|plotly|discord)"
 
 echo "=== 测试关键模块导入 ==="
 python -c "import kafka; print('✓ kafka 导入成功')"
+python -c "import confluent_kafka; print('✓ confluent_kafka 导入成功')"
 python -c "import requests; print('✓ requests 导入成功')"
 python -c "import numpy; print('✓ numpy 导入成功')"
 python -c "import pandas; print('✓ pandas 导入成功')" 

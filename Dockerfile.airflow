@@ -1,0 +1,16 @@
+FROM apache/airflow:2.9.0
+
+# 切换到 airflow 用户（官方推荐）
+USER airflow
+
+# 设置工作目录
+WORKDIR /opt/airflow
+
+# 拷贝依赖安装脚本
+COPY --chown=airflow:root install_dependencies.sh .
+
+# 运行脚本（使用 airflow 用户执行 pip 安装）
+RUN chmod +x install_dependencies.sh && ./install_dependencies.sh
+
+# 设置 PYTHONPATH
+ENV PYTHONPATH=/opt/airflow/project-root

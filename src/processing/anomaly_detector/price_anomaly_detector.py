@@ -134,7 +134,7 @@ class PriceAnomalyDetector:
             logger.error(f"Error in anomaly detection: {str(e)}")
             raise
 
-if __name__ == "__main__":
+def main():
     # Example usage
     detector = PriceAnomalyDetector(
         bootstrap_servers=['localhost:9092'],
@@ -145,3 +145,5 @@ if __name__ == "__main__":
         z_score_threshold=3.0
     )
     detector.run() 
+if __name__ == "__main__":
+    main()

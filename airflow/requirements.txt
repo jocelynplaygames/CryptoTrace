@@ -1,6 +1,7 @@
 # Core dependencies
 websockets==11.0.3
 kafka-python==2.0.2
+confluent-kafka>=2.0.0
 python-dateutil==2.8.2
 python-json-logger==2.0.7
 requests==2.31.0
@@ -20,17 +21,18 @@ websocket-client==1.6.1
 streamlit==1.29.0
 plotly==5.18.0
 
-
-#-----
+# Scientific Computing
 scipy==1.11.4
 
 # Discord Bot
 discord.py==2.5.2
 
-
+# Environment and Configuration
 python-dotenv==1.1.1
 
-# Airflow  DAG 
-kafka-python==2.0.2
-pandas==2.0.3
-python-dateutil==2.8.2
+# Additional dependencies for DAG modules
+asyncio
+threading
+statistics
+signal
+platform

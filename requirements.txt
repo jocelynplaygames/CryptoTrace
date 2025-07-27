@@ -1,6 +1,6 @@
 # 基础依赖
 websockets==11.0.3
-kafka-python==2.0.2
+confluent-kafka>=2.0.0
 python-dateutil==2.8.2
 python-json-logger==2.0.7
 requests==2.31.0

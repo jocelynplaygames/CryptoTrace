@@ -148,7 +148,7 @@ class CryptoAlertBot(commands.Bot):
             logger.error("❌ 找不到指定频道 ID")
 
 # 加载配置，为 bot 启动做好准备。
-def run_bot():
+def main():
     """Run the Discord bot."""
     # Get configuration from environment variables
     #通过 os.getenv() 从 .env 中加载 Kafka 和 Discord 的配置项
@@ -177,4 +177,4 @@ def run_bot():
     bot.run(TOKEN) #启动 Discord Bot（事件循环正式开始）
 
 if __name__ == "__main__":
-    run_bot() 
+    main() 
