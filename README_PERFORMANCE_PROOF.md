@@ -15,7 +15,9 @@ Our performance monitoring dashboard provides real-time visualization of key per
 
 ## 🎬 Live Demo
 
-![Dashboard Demo](images/performance improvement/CryptoTrace Performance Monitor - Google Chrome 2025-08-05.gif)
+![Dashboard Demo](images/performance%20improvement/CryptoTrace%20Performance%20Monitor%20-%20Google%20Chrome%202025-08-05.gif)
+
+
 
 ## 📈 Section-by-Section Explanation Guide
 
@@ -36,7 +38,8 @@ Our performance monitoring dashboard provides real-time visualization of key per
 - **Cache Hit Rate**: Achieved through Redis and in-memory caching strategies
 
 ### 📊 **2. Performance Trends**
-![Performance Trends](images/performance improvement/performance trends.png)
+![Performance Trends](images/performance%20improvement/performance%20trends.png)
+
 **Professional Explanation:**
 > "These four trend charts show our system's stability over the past 6 hours:
 
@@ -53,7 +56,7 @@ Each data point represents a 10-minute interval, showing our system maintains co
 - **Reliability**: Low latency and high accuracy maintained throughout monitoring period
 
 ### 🎯 **3. Optimization Impact**
-
+![Optimization Impact](images/performance%20improvement/key%20improvement.png)
 **Professional Explanation:**
 > "This comparison chart clearly demonstrates the impact of our optimization efforts:
 
@@ -72,6 +75,7 @@ These improvements translate to better user experience, higher system reliabilit
 - **92% reduction in database load through caching**
 
 ### 🔧 **4. System Status**
+![System Status](images/performance%20improvement/system%20status.png)
 
 **Professional Explanation:**
 > "Our system status monitoring shows:
