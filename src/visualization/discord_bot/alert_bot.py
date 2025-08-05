@@ -25,7 +25,8 @@ class CryptoAlertBot(commands.Bot):
         command_prefix: str,
         alert_channel_id: int,
         bootstrap_servers: str,
-        topic: str
+        anomaly_topic: str,
+        analytics_topic: str = "crypto_analytics"
     ):
         """
         Initialize the Crypto Alert Bot.
@@ -43,13 +44,29 @@ class CryptoAlertBot(commands.Bot):
         super().__init__(command_prefix=command_prefix, intents=intents, help_command=None)
         
         self.alert_channel_id = alert_channel_id
-        config = {
+        self.analytics_topic = analytics_topic
+        
+        # 异常警报消费者
+        anomaly_config = {
             'bootstrap.servers': bootstrap_servers,
-            'group.id': 'discord_alert_bot',
+            'group.id': 'discord_anomaly_bot',
             'auto.offset.reset': 'latest'
         }
-        self.consumer = Consumer(config)
-        self.consumer.subscribe([topic])
+        self.anomaly_consumer = Consumer(anomaly_config)
+        self.anomaly_consumer.subscribe([anomaly_topic])
+        
+        # 分析数据消费者
+        analytics_config = {
+            'bootstrap.servers': bootstrap_servers,
+            'group.id': 'discord_analytics_bot',
+            'auto.offset.reset': 'latest'
+        }
+        self.analytics_consumer = Consumer(analytics_config)
+        self.analytics_consumer.subscribe([analytics_topic])
+        
+        # 24小时价格变化阈值
+        self.price_change_threshold = 5.0  # 5%变化阈值
+        self.last_24h_notification = {}  # 记录每个币种的最后通知时间
         
         
 
@@ -94,6 +111,36 @@ class CryptoAlertBot(commands.Bot):
 {'⚠️ **URGENT:** Extreme price movement detected!' if alert_data['severity'] == 'high' else ''}
 """
 
+    def format_24h_change_message(self, analytics_data: Dict) -> str:
+        """Format the 24h price change data into a Discord message."""
+        symbol = analytics_data['symbol']
+        price_change_24h = analytics_data.get('price_change_24h', 0.0)
+        
+        # 根据变化幅度选择emoji
+        if abs(price_change_24h) >= 10:
+            emoji = "🚨"  # 大幅变化
+        elif abs(price_change_24h) >= 5:
+            emoji = "⚠️"  # 中等变化
+        elif price_change_24h > 0:
+            emoji = "📈"  # 小幅上涨
+        elif price_change_24h < 0:
+            emoji = "📉"  # 小幅下跌
+        else:
+            emoji = "➡️"  # 无变化
+        
+        current_price = analytics_data.get('average_price', 0.0)
+        
+        return f"""
+{emoji} **24-Hour Price Change Alert**
+
+**Symbol:** {symbol.upper()}
+**Current Price:** ${current_price:.2f}
+**24h Change:** {price_change_24h:+.2f}%
+**Time:** {datetime.fromisoformat(analytics_data['timestamp']).strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+{'🔥 **Significant movement detected!**' if abs(price_change_24h) >= self.price_change_threshold else '📊 Regular market update'}
+"""
+
     #后台循环任务开始监听 Kafka（每秒执行一次）
     @tasks.loop(seconds=1) #定义了一个定时异步任务
     async def check_alerts(self):
@@ -108,28 +155,46 @@ class CryptoAlertBot(commands.Bot):
                 logger.error(f"Could not find channel with ID {self.alert_channel_id}")
                 return
             
-            # # Check for new messages
-            # for message in self.consumer: #是阻塞式的无限迭代器
-            #     alert_data = message.value
-            #     alert_message = self.format_alert_message(alert_data)
-
-            # 用 poll() 替换 for message in self.consumer:
+            # 检查异常警报
+            anomaly_records = self.anomaly_consumer.poll(timeout=0.1)
+            if anomaly_records:
+                for tp, messages in anomaly_records.items():
+                    for message in messages:
+                        alert_data = json.loads(message.value().decode('utf-8'))
+                        alert_message = self.format_alert_message(alert_data)
+                        
+                        try:
+                            await channel.send(alert_message)
+                            logger.info(f"Sent anomaly alert for {alert_data['symbol']}")
+                        except Exception as e:
+                            logger.error(f"Error sending Discord message: {str(e)}")
             
-            records = self.consumer.poll(timeout=0.1) # 非阻塞拉取消息，100ms
-            #Kafka 会在 100 毫秒内尝试获取消息，如果没有消息会立刻返回，不阻塞主线程。
-            if records is None:
-                return  # 没有消息时直接返回
-            for tp, messages in records.items():
-                for message in messages:
-                    alert_data = json.loads(message.value().decode('utf-8'))
-                    alert_message = self.format_alert_message(alert_data)
-                
-                
-                try:
-                    await channel.send(alert_message)
-                    logger.info(f"Sent alert for {alert_data['symbol']}")
-                except Exception as e:
-                    logger.error(f"Error sending Discord message: {str(e)}")
+            # 检查24小时价格变化
+            analytics_records = self.analytics_consumer.poll(timeout=0.1)
+            if analytics_records:
+                for tp, messages in analytics_records.items():
+                    for message in messages:
+                        analytics_data = json.loads(message.value().decode('utf-8'))
+                        symbol = analytics_data.get('symbol', '')
+                        price_change_24h = analytics_data.get('price_change_24h', 0.0)
+                        
+                        # 检查是否需要发送24小时变化通知
+                        current_time = datetime.now()
+                        last_notification = self.last_24h_notification.get(symbol)
+                        
+                        # 如果变化超过阈值且距离上次通知超过1小时，则发送通知
+                        if (abs(price_change_24h) >= self.price_change_threshold and 
+                            (last_notification is None or 
+                             (current_time - last_notification).total_seconds() > 3600)):
+                            
+                            change_message = self.format_24h_change_message(analytics_data)
+                            
+                            try:
+                                await channel.send(change_message)
+                                self.last_24h_notification[symbol] = current_time
+                                logger.info(f"Sent 24h change alert for {symbol}: {price_change_24h:.2f}%")
+                            except Exception as e:
+                                logger.error(f"Error sending 24h change Discord message: {str(e)}")
                 
         except Exception as e:
             logger.error(f"Error in check_alerts: {str(e)}")
@@ -171,7 +236,8 @@ def main():
         command_prefix="!",
         alert_channel_id=CHANNEL_ID,
         bootstrap_servers=KAFKA_SERVERS,
-        topic='crypto_price_anomalies'
+        anomaly_topic='crypto_price_anomalies',
+        analytics_topic='crypto_analytics'
     )
     
     bot.run(TOKEN) #启动 Discord Bot（事件循环正式开始）

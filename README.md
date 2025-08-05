@@ -33,7 +33,23 @@ TABLEAU_SERVER_URL=your_tableau_server_url  # Optional
 docker-compose up -d kafka
 
 ### 2. 启动 WebSocket → Kafka 数据源
+
+#### 方式一：使用统一管理脚本（推荐）
+```bash
+# 独立运行模式
+python scripts/runners/run_unified_crypto_feed.py --mode standalone
+
+# 持续监控模式
+python scripts/runners/run_unified_crypto_feed.py --mode monitor --duration 3600
+
+# 测试模式
+python scripts/runners/run_unified_crypto_feed.py --mode test --symbols BTC-USD ETH-USD
+```
+
+#### 方式二：直接运行（传统方式）
+```bash
 python src/data_ingestion/crypto_feeds/example.py
+```
 
 ### 3. 启动 Processor（只能选一个）：
 ### 选 3A：默认处理器（线程版）

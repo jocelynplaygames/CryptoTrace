@@ -19,6 +19,9 @@ from src.data_ingestion.kafka_producer.crypto_producer import main as producer_m
 from src.processing.stream_processor.price_processor import main as price_processor_main
 from src.processing.anomaly_detector.price_anomaly_detector import main as anomaly_detector_main
 from src.visualization.discord_bot.alert_bot import main as discord_alert_main
+# 使用主版本的 example.py，通过绝对路径导入
+import sys
+sys.path.append('/opt/airflow/project-root')
 from src.data_ingestion.crypto_feeds.example import main as ws_feeder_main
 
 default_args = {
@@ -46,10 +49,20 @@ with DAG(
     #     op_args=["src.data_ingestion.crypto_feeds.example"],
     #     op_kwargs={"use_module": True},
     # )
-    #这样 Airflow 会直接调用 main() 函数执行，而不是用 subprocess 调模块。
+    # 使用统一的数据流脚本
+    def run_unified_crypto_feed():
+        """在 Airflow 中运行统一的数据流脚本"""
+        import os
+        # 设置 Airflow 环境变量
+        os.environ['CRYPTO_FEED_MODE'] = 'airflow'
+        os.environ['CRYPTO_SYMBOLS'] = 'BTC-USD,ETH-USD,SOL-USD,ADA-USD'
+        os.environ['KAFKA_TOPIC'] = 'crypto-prices'
+        # 运行主函数
+        ws_feeder_main()
+    
     run_ws_feeder = PythonOperator(
         task_id="run_ws_feeder",
-        python_callable=ws_feeder_main,
+        python_callable=run_unified_crypto_feed,
     )
 
     run_price_processor = PythonOperator(

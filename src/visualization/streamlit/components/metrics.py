@@ -120,6 +120,8 @@ def create_metric_card(title, value, prefix="$", suffix=""):
 def display_key_metrics(stats):
     """Display the key metrics in the top row with enhanced styling."""
     col1, col2, col3 = st.columns(3)
+    
+    # 第一行：当前价格、价格变化、24小时变化
 
     with col1:
         st.markdown(f"""
@@ -243,6 +245,10 @@ def display_key_metrics(stats):
         """, unsafe_allow_html=True)
 
     with col3:
+        # 24小时价格变化的颜色
+        color_24h = COLORS['success'] if stats.get('price_change_24h', 0) >= 0 else COLORS['error']
+        glow_color_24h = COLORS['success'] if stats.get('price_change_24h', 0) >= 0 else COLORS['error']
+        
         st.markdown(f"""
             <div class="metric-card" style='
                 background: linear-gradient(145deg, {COLORS['card_bg']}, rgba(40, 40, 40, 0.4));
@@ -254,7 +260,7 @@ def display_key_metrics(stats):
                 -webkit-backdrop-filter: blur(10px);
                 box-shadow: 
                     0 4px 20px rgba(0, 0, 0, 0.2),
-                    inset 0 0 20px rgba(0, 212, 255, 0.05);
+                    inset 0 0 20px {glow_color_24h}10;
                 position: relative;
                 overflow: hidden;
             '>
@@ -266,10 +272,68 @@ def display_key_metrics(stats):
                     bottom: 0;
                     background: linear-gradient(45deg,
                         transparent 0%,
-                        {COLORS['accent_secondary']}10 45%,
+                        {color_24h}10 45%,
                         transparent 100%
                     );
                 '></div>
+                <div style='position: relative; z-index: 1;'>
+                    <div style='
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        margin-bottom: 0.8rem;
+                    '>
+                        <span class="blink-effect" style='
+                            display: inline-block;
+                            width: 8px;
+                            height: 8px;
+                            background: {color_24h};
+                            border-radius: 50%;
+                            box-shadow: 0 0 10px {color_24h};
+                        '></span>
+                        <h3 style='
+                            margin: 0;
+                            color: {color_24h};
+                            font-size: 0.85rem;
+                            font-weight: 500;
+                            letter-spacing: 0.08em;
+                            text-transform: uppercase;
+                            opacity: 0.9;
+                        '>24h Change</h3>
+                    </div>
+                    <p style='
+                        font-size: 1.75rem;
+                        margin: 0;
+                        font-weight: 600;
+                        letter-spacing: -0.02em;
+                        line-height: 1.2;
+                        color: {color_24h};
+                        text-shadow: 0 0 20px {color_24h}50;
+                    '>{stats.get('price_change_24h', 0):+.2f}%</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # 第二行：24小时交易量
+    st.markdown("<br>", unsafe_allow_html=True)
+    col_volume = st.columns(1)[0]
+    
+    with col_volume:
+        st.markdown(f"""
+            <div class="metric-card" style='
+                background: linear-gradient(145deg, {COLORS['card_bg']}, rgba(40, 40, 40, 0.4));
+                padding: 1.5rem;
+                border-radius: 20px;
+                border: 1px solid {COLORS['border']};
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                box-shadow: 
+                    0 4px 20px rgba(0, 0, 0, 0.2),
+                    inset 0 0 20px rgba(0, 212, 255, 0.05);
+                position: relative;
+                overflow: hidden;
+            '>
                 <div style='position: relative; z-index: 1;'>
                     <div style='
                         display: flex;
@@ -293,17 +357,17 @@ def display_key_metrics(stats):
                             letter-spacing: 0.08em;
                             text-transform: uppercase;
                             opacity: 0.9;
-                        '>24h Volume</h3>
+                        '>24h Trading Volume</h3>
                     </div>
                     <p style='
-                        font-size: 1.75rem;
+                        font-size: 1.5rem;
                         margin: 0;
                         font-weight: 600;
                         letter-spacing: -0.02em;
                         line-height: 1.2;
                         color: {COLORS['text']};
                         text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-                    '>${stats['avg_volume']:,.0f}</p>
+                    '>${stats.get('avg_volume', 0):,.0f}</p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
