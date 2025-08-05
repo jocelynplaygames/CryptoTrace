@@ -146,17 +146,12 @@ class CryptoAlertBot(commands.Bot):
             logger.error("❌ 找不到指定频道 ID")
 
 # 加载配置，为 bot 启动做好准备。
-def run_bot():
-    """Run the Discord bot."""
+def main():
+    """Main function for running the Discord bot in Airflow environment."""
     # Get configuration from environment variables
-    #通过 os.getenv() 从 .env 中加载 Kafka 和 Discord 的配置项
-    #os.getenv() 只会从 系统的环境变量 中读取值。它并不会自动从 .env 文件中加载内容
-    #我增加使用 python-dotenv 来自动加载 .env 文件
     TOKEN = os.getenv('DISCORD_BOT_TOKEN')
     CHANNEL_ID = int(os.getenv('DISCORD_CHANNEL_ID'))
-    # KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(',')
     KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'host.docker.internal:9092').split(',')
-
     
     if not TOKEN:
         raise ValueError("DISCORD_BOT_TOKEN environment variable is not set")
@@ -172,7 +167,12 @@ def run_bot():
         topic='crypto_price_anomalies'
     )
     
-    bot.run(TOKEN) #启动 Discord Bot（事件循环正式开始）
+    try:
+        logger.info("Starting Discord alert bot...")
+        bot.run(TOKEN)
+    except Exception as e:
+        logger.error(f"Error in Discord bot: {e}")
+        raise
 
 if __name__ == "__main__":
-    run_bot() 
+    main() 

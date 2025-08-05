@@ -71,7 +71,23 @@ class PerformanceMonitor:
     def get_metrics_df(self) -> pd.DataFrame:
         """Get metrics DataFrame"""
         with self.lock:
-            return pd.DataFrame(self.metrics_history)
+            # Check if we have any data
+            if not self.metrics_history['timestamp']:
+                # Return empty DataFrame with correct columns
+                return pd.DataFrame(columns=self.metrics_history.keys())
+            
+            # Ensure all arrays have the same length
+            max_length = max(len(values) for values in self.metrics_history.values())
+            
+            # Pad shorter arrays with None
+            padded_history = {}
+            for key, values in self.metrics_history.items():
+                if len(values) < max_length:
+                    padded_history[key] = values + [None] * (max_length - len(values))
+                else:
+                    padded_history[key] = values
+            
+            return pd.DataFrame(padded_history)
 
 class PerformanceDashboard:
     """Performance Monitoring Dashboard"""
@@ -90,6 +106,10 @@ class PerformanceDashboard:
         )
         
         st.title("🚀 CryptoTrace Performance Monitoring Dashboard")
+        
+        # Add disclaimer about simulated data
+        st.info("📊 **Note**: This dashboard displays simulated performance data for demonstration purposes. In a real production environment, this would show actual system metrics from your cryptocurrency monitoring system.")
+        
         st.markdown("---")
     
     def run(self):
@@ -184,40 +204,96 @@ class PerformanceDashboard:
         df = self.monitor.get_metrics_df()
         
         if len(df) > 0:
-            # Create subplots
+            # Create subplots with better configuration
             fig = make_subplots(
                 rows=2, cols=2,
-                subplot_titles=('Detection Accuracy', 'System Throughput', 'Response Latency', 'Cache Hit Rate'),
+                subplot_titles=('Detection Accuracy (%)', 'System Throughput (msg/s)', 'Response Latency (ms)', 'Cache Hit Rate (%)'),
                 specs=[[{"secondary_y": False}, {"secondary_y": False}],
                        [{"secondary_y": False}, {"secondary_y": False}]]
             )
             
             # Detection accuracy trend
             fig.add_trace(
-                go.Scatter(x=df['timestamp'], y=df['detection_accuracy'], name='Accuracy', line=dict(color='green')),
+                go.Scatter(
+                    x=df['timestamp'], 
+                    y=df['detection_accuracy'] * 100,  # Convert to percentage
+                    name='Accuracy', 
+                    line=dict(color='green', width=2),
+                    mode='lines+markers',
+                    marker=dict(size=4)
+                ),
                 row=1, col=1
             )
             
             # Throughput trend
             fig.add_trace(
-                go.Scatter(x=df['timestamp'], y=df['throughput'], name='Throughput', line=dict(color='blue')),
+                go.Scatter(
+                    x=df['timestamp'], 
+                    y=df['throughput'], 
+                    name='Throughput', 
+                    line=dict(color='blue', width=2),
+                    mode='lines+markers',
+                    marker=dict(size=4)
+                ),
                 row=1, col=2
             )
             
             # Latency trend
             fig.add_trace(
-                go.Scatter(x=df['timestamp'], y=df['latency'], name='Latency', line=dict(color='red')),
+                go.Scatter(
+                    x=df['timestamp'], 
+                    y=df['latency'], 
+                    name='Latency', 
+                    line=dict(color='red', width=2),
+                    mode='lines+markers',
+                    marker=dict(size=4)
+                ),
                 row=2, col=1
             )
             
             # Cache hit rate trend
             fig.add_trace(
-                go.Scatter(x=df['timestamp'], y=df['cache_hit_rate'], name='Cache Hit Rate', line=dict(color='orange')),
+                go.Scatter(
+                    x=df['timestamp'], 
+                    y=df['cache_hit_rate'] * 100,  # Convert to percentage
+                    name='Cache Hit Rate', 
+                    line=dict(color='orange', width=2),
+                    mode='lines+markers',
+                    marker=dict(size=4)
+                ),
                 row=2, col=2
             )
             
-            fig.update_layout(height=600, showlegend=False)
+            # Update layout with better formatting
+            fig.update_layout(
+                height=600, 
+                showlegend=False,
+                title_text="Real-time Performance Monitoring (Last 6 Hours)",
+                title_x=0.5
+            )
+            
+            # Update x-axis for better time display
+            fig.update_xaxes(
+                tickformat='%H:%M',
+                tickmode='auto',
+                nticks=8,
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='lightgray'
+            )
+            
+            # Update y-axes with better formatting
+            fig.update_yaxes(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='lightgray',
+                zeroline=False
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Add explanation
+            st.info("📈 **Trend Analysis**: These charts show the system performance over the last 6 hours. Each data point represents a 10-minute interval, providing a clear view of performance stability and trends.")
         else:
             st.info("No performance data available yet. Start the system to see metrics.")
     
@@ -225,42 +301,57 @@ class PerformanceDashboard:
         """Display optimization impact comparison"""
         st.subheader("🎯 Optimization Impact")
         
-        # Before/After comparison data
+        # Before/After comparison data with better scaling
         comparison_data = {
-            'Metric': ['Detection Accuracy', 'Throughput', 'Latency', 'Cache Hit Rate', 'False Positive Rate'],
-            'Before': [65, 1500, 350, 60, 35],
+            'Metric': ['Detection Accuracy (%)', 'Throughput (msg/s)', 'Latency (ms)', 'Cache Hit Rate (%)', 'False Positive Rate (%)'],
+            'Before': [65, 1500, 350, 0, 35],
             'After': [88, 4200, 120, 92, 12],
-            'Improvement': [23, 180, -66, 32, -23]
+            'Improvement': [23, 180, -66, 92, -23]
         }
         
         df_comparison = pd.DataFrame(comparison_data)
         
-        # Create comparison chart
+        # Create comparison chart with better scaling
         fig = go.Figure()
         
+        # Add Before bars
         fig.add_trace(go.Bar(
             name='Before Optimization',
             x=df_comparison['Metric'],
             y=df_comparison['Before'],
-            marker_color='lightcoral'
+            marker_color='lightcoral',
+            text=df_comparison['Before'],
+            textposition='auto',
         ))
         
+        # Add After bars
         fig.add_trace(go.Bar(
             name='After Optimization',
             x=df_comparison['Metric'],
             y=df_comparison['After'],
-            marker_color='lightgreen'
+            marker_color='lightgreen',
+            text=df_comparison['After'],
+            textposition='auto',
         ))
         
         fig.update_layout(
             title='Performance Comparison: Before vs After Optimization',
             barmode='group',
-            height=400
+            height=500,
+            yaxis_title='Value',
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
         )
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Improvement summary
+        # Improvement summary with better formatting
         st.subheader("📈 Key Improvements")
         
         col1, col2 = st.columns(2)
@@ -271,8 +362,8 @@ class PerformanceDashboard:
             st.metric("Response Latency", "-66%", "350ms → 120ms")
         
         with col2:
-            st.metric("Cache Hit Rate", "+32%", "60% → 92%")
-            st.metric("False Positive Rate", "-23%", "35% → 12%")
+            st.metric("Cache Hit Rate", "New Feature", "0% → 92%")
+            st.metric("False Positive Rate", "-66%", "35% → 12%")
             st.metric("Overall Performance", "+128%", "Significant improvement")
     
     def display_system_status(self):
@@ -331,20 +422,46 @@ class PerformanceDashboard:
     def simulate_metrics(self):
         """Simulate performance metrics for demonstration"""
         import random
+        import time
         
-        # Simulate realistic metrics
-        self.monitor.add_metric('detection_accuracy', random.uniform(0.85, 0.92))
-        self.monitor.add_metric('throughput', random.uniform(3800, 4500))
-        self.monitor.add_metric('latency', random.uniform(100, 140))
-        self.monitor.add_metric('cache_hit_rate', random.uniform(0.88, 0.95))
-        self.monitor.add_metric('cpu_usage', random.uniform(40, 50))
-        self.monitor.add_metric('memory_usage', random.uniform(350, 400))
-        self.monitor.add_metric('false_positive_rate', random.uniform(0.10, 0.15))
-        self.monitor.add_metric('ml_accuracy', random.uniform(0.82, 0.88))
+        # Generate data starting from current time (more realistic)
+        current_time = time.time()
+        hours_back = 6  # Last 6 hours
+        
+        for i in range(hours_back * 6):  # 6 data points per hour = 36 total points
+            # Calculate timestamp starting from 6 hours ago to now
+            timestamp = current_time - (hours_back * 3600) + (i * 600)  # 10-minute intervals
+            
+            # Generate realistic metrics with smoother variation
+            base_accuracy = 0.85 + (i % 6) * 0.015  # Smoother accuracy variation
+            base_throughput = 3800 + (i % 12) * 30   # Smoother throughput variation
+            base_latency = 100 + (i % 8) * 2         # Smoother latency variation
+            base_cache = 0.88 + (i % 5) * 0.008      # Smoother cache hit rate variation
+            
+            # Add smaller random noise for cleaner lines
+            noise_factor = random.uniform(0.98, 1.02)
+            
+            # Add metrics with timestamp
+            self.monitor.add_metric('detection_accuracy', base_accuracy * noise_factor)
+            self.monitor.add_metric('throughput', base_throughput * noise_factor)
+            self.monitor.add_metric('latency', base_latency * noise_factor)
+            self.monitor.add_metric('cache_hit_rate', base_cache * noise_factor)
+            self.monitor.add_metric('cpu_usage', random.uniform(40, 50))
+            self.monitor.add_metric('memory_usage', random.uniform(350, 400))
+            self.monitor.add_metric('false_positive_rate', random.uniform(0.10, 0.15))
+            self.monitor.add_metric('ml_accuracy', random.uniform(0.82, 0.88))
+            
+            # Update timestamp for this data point
+            self.monitor.metrics_history['timestamp'][-1] = datetime.fromtimestamp(timestamp)
 
 def main():
     """Main function to run the dashboard"""
     dashboard = PerformanceDashboard()
+    
+    # Pre-populate with historical data for better visualization
+    print("🔄 Initializing dashboard with historical data...")
+    dashboard.simulate_metrics()
+    print("✅ Historical data loaded successfully!")
     
     def simulate_data():
         """Simulate data for demonstration"""

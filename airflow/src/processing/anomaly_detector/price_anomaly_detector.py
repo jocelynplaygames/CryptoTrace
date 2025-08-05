@@ -342,14 +342,31 @@ class EnhancedPriceAnomalyDetector:
             logger.error(f"Error in anomaly detection: {str(e)}")
             raise
 
-if __name__ == "__main__":
-    # Example usage
-    detector = PriceAnomalyDetector(
-        bootstrap_servers=['localhost:9092'],
-        # input_topic='processed_crypto_prices',
+def main():
+    """Main function for running the anomaly detector in Airflow environment."""
+    import os
+    
+    # 使用Docker环境配置
+    bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'host.docker.internal:9092').split(',')
+    
+    detector = EnhancedPriceAnomalyDetector(
+        bootstrap_servers=bootstrap_servers,
         input_topic='crypto_analytics',
         output_topic='crypto_price_anomalies',
         window_size=60,  # 1 hour window
-        z_score_threshold=3.0
+        z_score_threshold=3.0,
+        use_ml_detection=True,
+        ensemble_methods=True
     )
-    detector.run() 
+    
+    try:
+        logger.info("Starting enhanced anomaly detector...")
+        detector.run()
+    except KeyboardInterrupt:
+        logger.info("Shutting down anomaly detector...")
+    except Exception as e:
+        logger.error(f"Error in anomaly detector: {e}")
+        raise
+
+if __name__ == "__main__":
+    main() 

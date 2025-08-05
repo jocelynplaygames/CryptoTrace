@@ -1,16 +1,81 @@
-FROM apache/airflow:2.9.0
+FROM apache/airflow:2.7.1
 
-# 切换到 airflow 用户（官方推荐）
-USER airflow
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
-WORKDIR /opt/airflow
+WORKDIR /opt/airflow/project-root
 
-# 拷贝依赖安装脚本
-COPY --chown=airflow:root install_dependencies.sh .
+# 复制requirements文件
+COPY requirements.txt .
+COPY airflow/requirements.txt ./airflow_requirements.txt
 
-# 运行脚本（使用 airflow 用户执行 pip 安装）
-RUN chmod +x install_dependencies.sh && ./install_dependencies.sh
+# 升级pip并安装Python依赖
+RUN pip install --upgrade pip setuptools wheel
 
-# 设置 PYTHONPATH
+# 安装基础依赖（避免冲突）
+RUN pip install --no-cache-dir \
+    six \
+    "websockets==11.0.3" \
+    "python-dateutil==2.8.2" \
+    "python-json-logger==2.0.7" \
+    "requests==2.31.0" \
+    "python-dotenv==1.1.1"
+
+# 安装Kafka相关依赖
+RUN pip install --no-cache-dir \
+    "kafka-python==2.0.2" \
+    "confluent-kafka>=2.0.0"
+
+# 安装数据处理依赖
+RUN pip install --no-cache-dir \
+    "numpy>=1.26.0" \
+    "pandas>=2.1.0" \
+    "scipy>=1.11.0" \
+    "scikit-learn>=1.3.0"
+
+# 安装可视化依赖
+RUN pip install --no-cache-dir \
+    "streamlit>=1.28.0" \
+    "plotly>=5.17.0"
+
+# 安装Web框架依赖
+RUN pip install --no-cache-dir \
+    "fastapi>=0.115.0" \
+    "uvicorn>=0.32.0" \
+    "pydantic>=2.10.0"
+
+# 安装Discord Bot依赖
+RUN pip install --no-cache-dir \
+    "discord.py>=2.3.0"
+
+# 安装其他依赖
+RUN pip install --no-cache-dir \
+    "pyarrow>=14.0.0" \
+    "websocket-client>=1.6.0"
+
+# 创建必要的目录
+RUN mkdir -p /opt/airflow/project-root/data \
+    && mkdir -p /opt/airflow/logs \
+    && mkdir -p /opt/airflow/dags \
+    && mkdir -p /opt/airflow/plugins
+
+# 设置环境变量
 ENV PYTHONPATH=/opt/airflow/project-root
+ENV AIRFLOW_HOME=/opt/airflow
+ENV KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
+
+# 设置权限
+RUN chown -R airflow:root /opt/airflow/project-root \
+    && chmod -R 755 /opt/airflow/project-root
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# 切换到airflow用户
+USER airflow

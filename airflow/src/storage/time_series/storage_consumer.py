@@ -142,3 +142,57 @@ class StorageConsumer:
         if self.consumer:
             self.consumer.close()
             logger.info("Storage consumer stopped") 
+
+def main():
+    """Main function for running the storage consumer in Airflow environment."""
+    import os
+    import signal
+    import sys
+    from pathlib import Path
+    
+    # 使用Docker环境配置
+    bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'host.docker.internal:9092')
+    
+    # 创建数据目录
+    data_dir = Path("/opt/airflow/project-root/data")
+    data_dir.mkdir(exist_ok=True)
+    
+    # 初始化组件
+    price_store = PriceStore(data_dir)
+    consumer = StorageConsumer(
+        price_store=price_store,
+        bootstrap_servers=bootstrap_servers,
+        price_topics=[
+            "crypto_prices.btcusdt",
+            "crypto_prices.ethusdt", 
+            "crypto_prices.solusdt",
+            "crypto_prices.adausdt"
+        ],
+        analytics_topic="crypto_analytics",
+        alerts_topic="crypto_price_anomalies"
+    )
+    
+    def signal_handler(signum, frame):
+        """Handle shutdown signals."""
+        logger.info("Received shutdown signal")
+        consumer.stop()
+        sys.exit(0)
+    
+    # 注册信号处理器
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        logger.info("Starting storage consumer...")
+        consumer.start()
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    except Exception as e:
+        logger.error(f"Error in storage consumer: {e}")
+        raise
+    finally:
+        consumer.stop()
+        logger.info("Storage consumer stopped")
+
+if __name__ == "__main__":
+    main() 

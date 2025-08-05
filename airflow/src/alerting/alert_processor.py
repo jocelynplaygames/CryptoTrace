@@ -220,3 +220,54 @@ class AlertProcessor:
                 self.consumer.close()
             if self.producer:
                 self.producer.close() 
+
+def main():
+    """Main function for running the alert processor in Airflow environment."""
+    import os
+    import signal
+    import sys
+    
+    # 使用Docker环境配置
+    bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'host.docker.internal:9092')
+    
+    # 初始化告警处理器
+    price_topics = [
+        'crypto_prices.btcusdt',
+        'crypto_prices.ethusdt',
+        'crypto_prices.solusdt',
+        'crypto_prices.adausdt'
+    ]
+    
+    processor = AlertProcessor(
+        bootstrap_servers=bootstrap_servers,
+        price_topics=price_topics,
+        alert_topic='crypto_alerts',
+        consumer_group='airflow_alert_processor'
+    )
+    
+    def signal_handler(signum, frame):
+        """Handle shutdown signals."""
+        logger.info("Received shutdown signal")
+        sys.exit(0)
+    
+    # 注册信号处理器
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        # 连接到Kafka
+        if processor.connect():
+            logger.info("Alert processor connected to Kafka")
+            # 运行处理器
+            processor.run()
+        else:
+            logger.error("Failed to connect to Kafka")
+            sys.exit(1)
+    except KeyboardInterrupt:
+        logger.info("Shutting down alert processor...")
+    except Exception as e:
+        logger.error(f"Error in alert processor: {e}")
+        raise
+
+if __name__ == "__main__":
+    main() 

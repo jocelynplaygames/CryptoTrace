@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from kafka import KafkaConsumer
 import pandas as pd
+import logging
 
 app = FastAPI(
     title="Crypto Price API",
@@ -235,3 +236,26 @@ async def websocket_endpoint(websocket):
         await websocket.close()
     finally:
         consumer.close() 
+
+def main():
+    """Main function for running the FastAPI server in Airflow environment."""
+    import uvicorn
+    import os
+    
+    # 获取配置
+    host = os.getenv('API_HOST', '0.0.0.0')
+    port = int(os.getenv('API_PORT', '8000'))
+    
+    try:
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
+        logger.info(f"Starting FastAPI server on {host}:{port}")
+        uvicorn.run(app, host=host, port=port)
+    except Exception as e:
+        logging.basicConfig(level=logging.ERROR)
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error starting API server: {e}")
+        raise
+
+if __name__ == "__main__":
+    main() 
